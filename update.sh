@@ -274,8 +274,8 @@ main() {
     # 显示菜单
     show_menu
 
-    # 读取用户选择
-    read -p "请输入选项 [0-3]: " choice
+    # 读取用户选择（从终端读取，即使通过管道执行也能正常工作）
+    read -p "请输入选项 [0-3]: " choice </dev/tty
     echo ""
 
     case $choice in

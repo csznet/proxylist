@@ -157,7 +157,7 @@ scan_config_files() {
         for path in "${alt_paths[@]}"; do
             if [ -f "$path" ]; then
                 print_warning "找到配置文件: $path"
-                read -p "是否使用此文件作为 DNSMasq 配置? [y/N]: " use_alt
+                read -p "是否使用此文件作为 DNSMasq 配置? [y/N]: " use_alt </dev/tty
                 if [[ $use_alt =~ ^[Yy]$ ]]; then
                     DNSMASQ_CONF="$path"
                     print_success "使用配置文件: $DNSMASQ_CONF"
@@ -339,7 +339,7 @@ main() {
     print_info "请输入要添加的域名（支持多个域名，用空格或逗号分隔）"
     print_info "示例: example.com google.com, openai.com"
     echo ""
-    read -p "域名: " domains_input
+    read -p "域名: " domains_input </dev/tty
 
     # 清理输入，支持空格和逗号分隔
     domains_input=$(echo "$domains_input" | tr ',' ' ')
