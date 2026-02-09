@@ -16,8 +16,23 @@ DNSMASQ_CONF="/etc/dnsmasq.d/custom_netflix.conf"
 
 # 获取脚本所在目录
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SNIPROXY_SOURCE="$SCRIPT_DIR/sniproxy.conf"
-DNSMASQ_SOURCE="$SCRIPT_DIR/dnsmasq.conf"
+
+# GitHub 仓库地址
+GITHUB_RAW_URL="https://raw.githubusercontent.com/csznet/proxylist/main"
+
+# 检查是否通过 curl 管道执行（BASH_SOURCE[0] 会是 "bash" 或 "-bash"）
+if [[ "${BASH_SOURCE[0]}" == "bash" ]] || [[ "${BASH_SOURCE[0]}" == "-bash" ]] || [[ ! -f "${BASH_SOURCE[0]}" ]]; then
+    # 通过 curl 管道执行，使用临时目录
+    TEMP_DIR=$(mktemp -d)
+    SNIPROXY_SOURCE="$TEMP_DIR/sniproxy.conf"
+    DNSMASQ_SOURCE="$TEMP_DIR/dnsmasq.conf"
+    USE_GITHUB=1
+else
+    # 本地执行，使用脚本所在目录
+    SNIPROXY_SOURCE="$SCRIPT_DIR/sniproxy.conf"
+    DNSMASQ_SOURCE="$SCRIPT_DIR/dnsmasq.conf"
+    USE_GITHUB=0
+fi
 
 # 打印带颜色的信息
 print_info() {
@@ -45,10 +60,40 @@ check_root() {
     fi
 }
 
+# 从 GitHub 下载配置文件
+download_from_github() {
+    print_info "从 GitHub 下载配置文件..."
+
+    # 下载 sniproxy.conf
+    if curl -fsSL "$GITHUB_RAW_URL/sniproxy.conf" -o "$SNIPROXY_SOURCE"; then
+        print_success "已下载: sniproxy.conf"
+    else
+        print_error "下载失败: sniproxy.conf"
+        cleanup_temp
+        exit 1
+    fi
+
+    # 下载 dnsmasq.conf
+    if curl -fsSL "$GITHUB_RAW_URL/dnsmasq.conf" -o "$DNSMASQ_SOURCE"; then
+        print_success "已下载: dnsmasq.conf"
+    else
+        print_error "下载失败: dnsmasq.conf"
+        cleanup_temp
+        exit 1
+    fi
+}
+
 # 检查源文件是否存在
 check_source_files() {
     local missing_files=0
 
+    # 如果是通过 GitHub 执行，先下载文件
+    if [ $USE_GITHUB -eq 1 ]; then
+        download_from_github
+        return 0
+    fi
+
+    # 本地执行，检查文件是否存在
     if [ ! -f "$SNIPROXY_SOURCE" ]; then
         print_error "源文件不存在: $SNIPROXY_SOURCE"
         missing_files=1
@@ -210,6 +255,14 @@ show_menu() {
     echo ""
 }
 
+# 清理临时文件
+cleanup_temp() {
+    if [ $USE_GITHUB -eq 1 ] && [ -n "$TEMP_DIR" ] && [ -d "$TEMP_DIR" ]; then
+        rm -rf "$TEMP_DIR"
+        print_info "已清理临时文件"
+    fi
+}
+
 # 主函数
 main() {
     # 检查权限
@@ -243,14 +296,22 @@ main() {
             ;;
         0)
             print_info "退出程序"
+            cleanup_temp
             exit 0
             ;;
         *)
             print_error "无效的选项，请重新运行脚本"
+            cleanup_temp
             exit 1
             ;;
     esac
+
+    # 清理临时文件
+    cleanup_temp
 }
+
+# 捕获退出信号，确保清理临时文件
+trap cleanup_temp EXIT
 
 # 运行主函数
 main
