@@ -112,7 +112,7 @@ check_source_files() {
 # 备份配置文件
 backup_config() {
     local config_file=$1
-    local backup_file="${config_file}.backup.$(date +%Y%m%d_%H%M%S)"
+    local backup_file="${config_file}.bak-$(date +%Y%m%d_%H%M%S)"
 
     if [ -f "$config_file" ]; then
         cp "$config_file" "$backup_file"
